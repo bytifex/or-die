@@ -1,0 +1,11 @@
+[package]
+name = "or-die"
+version = "1.0.0"
+edition = "2024"
+license = "MIT"
+description = "The crate provides deterrent methods for unwrapping a value from Options and Results with better parametrization"
+repository = "https://github.com/bytifex/or-die"
+readme = "README.md"
+keywords = ["result", "option", "unwrap", "trait", "deterrent"]
+
+[dependencies]

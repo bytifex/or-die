@@ -34,7 +34,7 @@ impl<T, ErrorType: core::fmt::Debug> OrDie<T> for Result<T, ErrorType> {
         match self {
             Ok(value) => value,
             Err(e) => {
-                die!("internal error: {:?}", e);
+                die!("internal error: error = '{:?}'", e);
             }
         }
     }
@@ -49,7 +49,7 @@ impl<T, FromErrorType, ToErrorType: core::fmt::Debug>
         match self {
             Ok(value) => value,
             Err(e) => {
-                die!("internal error: {:?}", f(e));
+                die!("internal error: error = '{:?}'", f(e));
             }
         }
     }
@@ -62,7 +62,7 @@ impl<T, ErrorType: core::fmt::Debug> OrDieWithMsg<T> for Result<T, ErrorType> {
         match self {
             Ok(value) => value,
             Err(e) => {
-                die!("internal error: '{}', {:?}", msg, e);
+                die!("internal error: message = '{}', error = '{:?}'", msg, e);
             }
         }
     }
@@ -88,7 +88,7 @@ impl<T, ToErrorType: core::fmt::Debug> OrDieWithOnOption<T, ToErrorType> for Opt
         match self {
             Some(value) => value,
             None => {
-                die!("internal error: {:?}", f());
+                die!("internal error: error = '{:?}'", f());
             }
         }
     }
@@ -101,7 +101,7 @@ impl<T> OrDieWithMsg<T> for Option<T> {
         match self {
             Some(value) => value,
             None => {
-                die!("internal error: '{}'", msg);
+                die!("internal error: message = '{}'", msg);
             }
         }
     }

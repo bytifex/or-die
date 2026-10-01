@@ -1,9 +1,37 @@
 #![no_std]
 
+use core::sync::atomic::{AtomicPtr, Ordering};
+
+/// A global handler invoked by `die!` in place of panicking, if one has been set.
+pub type DieHandler = fn(core::fmt::Arguments) -> !;
+
+static DIE_HANDLER: AtomicPtr<()> = AtomicPtr::new(core::ptr::null_mut());
+
+/// Sets a global handler that `die!` (and the `or_die` family) will call instead of panicking.
+pub fn set_die_handler(handler: DieHandler) {
+    DIE_HANDLER.store(handler as *mut (), Ordering::SeqCst);
+}
+
+/// Clears the global die handler, reverting `die!` to its default panicking behavior.
+pub fn reset_die_handler() {
+    DIE_HANDLER.store(core::ptr::null_mut(), Ordering::SeqCst);
+}
+
+#[doc(hidden)]
+pub fn die_handler() -> Option<DieHandler> {
+    let ptr = DIE_HANDLER.load(Ordering::SeqCst);
+    // SAFETY: `Option<DieHandler>` is guaranteed null-pointer-optimized, and `ptr` is either
+    // null (unset) or a value stored from a `DieHandler` via `set_die_handler`.
+    unsafe { core::mem::transmute::<*mut (), Option<DieHandler>>(ptr) }
+}
+
 #[macro_export]
 macro_rules! die {
     ($($arg:tt)*) => {
-        ::core::panic!($($arg)*)
+        match $crate::die_handler() {
+            ::core::option::Option::Some(handler) => handler(::core::format_args!($($arg)*)),
+            ::core::option::Option::None => ::core::panic!($($arg)*),
+        }
     }
 }
 

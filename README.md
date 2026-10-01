@@ -17,8 +17,9 @@ All methods are in the form of `or_die..(..)`. The following methods can be used
   - `Result::or_die_with(f: impl FnOnce(FromErrorType) -> ToErrorType)`
   - `Result::or_die_with_msg(msg: &str)`
 
-## Example
-```
+
+### Example
+```rust
 use or_die::OrDieWith;
 
 fn read_file_to_string(file_path: impl AsRef<std::path::Path>) -> String {
@@ -28,5 +29,44 @@ fn read_file_to_string(file_path: impl AsRef<std::path::Path>) -> String {
             file_path.as_ref()
         )
     })
+}
+```
+
+
+## DieHandler
+A handler can be set, that is called when one of the `die` methods are called. Also, this handler can be reset.
+
+The following functions can be used to setting and resetting the handler that is called when one of the `die` methods are called:
+- `set_die_handler(..)`
+- `reset_die_handler()`
+
+
+### Examples
+
+**Using a function**
+```rust
+use or_die::die;
+
+fn die_handler(args: core::fmt::Arguments) -> ! {
+    eprintln!("{}", args);
+    std::process::exit(0);
+}
+
+fn main() {
+    or_die::set_die_handler(die_handler);
+    die!("my error message");
+}
+```
+
+**Using a closure**
+```rust
+use or_die::die;
+
+fn main() {
+    or_die::set_die_handler(|args| {
+        eprintln!("{}", args);
+        std::process::exit(0);
+    });
+    die!("my error message");
 }
 ```

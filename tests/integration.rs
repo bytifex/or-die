@@ -1,5 +1,45 @@
 use or_die::{OrDie, OrDieWithMsg, OrDieWithOnOption, OrDieWithOnResult, die};
 
+// Guards the tests below since the die handler is process-global state shared across
+// test threads.
+static DIE_HANDLER_TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+static DIE_HANDLER_CALLED: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
+fn test_die_handler(args: core::fmt::Arguments) -> ! {
+    DIE_HANDLER_CALLED.store(true, std::sync::atomic::Ordering::SeqCst);
+    panic!("{}", args);
+}
+
+#[test]
+fn set_die_handler_is_invoked_by_die() {
+    let _guard = DIE_HANDLER_TEST_LOCK.lock().unwrap();
+    DIE_HANDLER_CALLED.store(false, std::sync::atomic::Ordering::SeqCst);
+
+    or_die::set_die_handler(test_die_handler);
+    let result = std::panic::catch_unwind(|| {
+        die!("my error message");
+    });
+
+    assert!(result.is_err());
+    assert!(DIE_HANDLER_CALLED.load(std::sync::atomic::Ordering::SeqCst));
+}
+
+#[test]
+fn reset_die_handler_restores_default_panic_behavior() {
+    let _guard = DIE_HANDLER_TEST_LOCK.lock().unwrap();
+    or_die::set_die_handler(test_die_handler);
+    or_die::reset_die_handler();
+    DIE_HANDLER_CALLED.store(false, std::sync::atomic::Ordering::SeqCst);
+
+    let result = std::panic::catch_unwind(|| {
+        die!("my error message");
+    });
+
+    assert!(result.is_err());
+    assert!(!DIE_HANDLER_CALLED.load(std::sync::atomic::Ordering::SeqCst));
+}
+
 #[test]
 #[should_panic]
 fn file_handling() {

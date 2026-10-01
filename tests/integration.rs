@@ -38,9 +38,16 @@ fn set_die_handler_closure_is_invoked_by_die() {
     let _guard = DIE_HANDLER_TEST_LOCK.lock().unwrap();
     DIE_HANDLER_CALLED.store(false, std::sync::atomic::Ordering::SeqCst);
 
-    or_die::set_die_handler(|location, backtrace, args| {
-        test_die_handler(location, backtrace, args)
-    });
+    or_die::set_die_handler(
+        |location, #[cfg(not(feature = "no-std"))] backtrace, args| {
+            test_die_handler(
+                location,
+                #[cfg(not(feature = "no-std"))]
+                backtrace,
+                args,
+            )
+        },
+    );
 
     let result = std::panic::catch_unwind(|| {
         die!("my error message");

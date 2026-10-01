@@ -33,26 +33,36 @@ pub fn die_handler() -> Option<DieHandler> {
 }
 
 #[macro_export]
+#[cfg(not(feature = "no-std"))]
 macro_rules! die {
     ($($arg:tt)*) => {
         match $crate::die_handler() {
             ::core::option::Option::Some(handler) => handler(
                 ::core::panic::Location::caller(),
-                #[cfg(not(feature = "no-std"))]
                 std::backtrace::Backtrace::capture(),
                 ::core::format_args!($($arg)*),
             ),
-            ::core::option::Option::None => {
-                #[cfg(not(feature = "no-std"))]
-                ::core::panic!(
-                    "backtrace: {}, {}",
-                    std::backtrace::Backtrace::capture(),
-                    ::core::format_args!($($arg)*),
-                );
+            ::core::option::Option::None => ::core::panic!(
+                "backtrace: {}, {}",
+                std::backtrace::Backtrace::capture(),
+                ::core::format_args!($($arg)*),
+            ),
+        }
+    }
+}
 
-                #[cfg(feature = "no-std")]
-                ::core::panic!($($arg)*);
-            },
+#[macro_export]
+#[cfg(feature = "no-std")]
+macro_rules! die {
+    ($($arg:tt)*) => {
+        match $crate::die_handler() {
+            ::core::option::Option::Some(handler) => handler(
+                ::core::panic::Location::caller(),
+                ::core::format_args!($($arg)*),
+            ),
+            ::core::option::Option::None => ::core::panic!(
+                $($arg)*,
+            ),
         }
     }
 }

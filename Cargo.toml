@@ -9,3 +9,6 @@ readme = "README.md"
 keywords = ["result", "option", "unwrap", "trait", "deterrent"]
 
 [dependencies]
+
+[features]
+no-std = []

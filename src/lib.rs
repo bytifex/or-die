@@ -1,9 +1,16 @@
-#![no_std]
+#![cfg_attr(feature = "no-std", no_std)]
 
 use core::sync::atomic::{AtomicPtr, Ordering};
 
 /// A global handler invoked by `die!` in place of panicking, if one has been set.
-pub type DieHandler = fn(core::fmt::Arguments) -> !;
+#[cfg(not(feature = "no-std"))]
+pub type DieHandler = fn(
+    &'static core::panic::Location<'static>,
+    std::backtrace::Backtrace,
+    core::fmt::Arguments,
+) -> !;
+#[cfg(feature = "no-std")]
+pub type DieHandler = fn(&'static core::panic::Location<'static>, core::fmt::Arguments) -> !;
 
 static DIE_HANDLER: AtomicPtr<()> = AtomicPtr::new(core::ptr::null_mut());
 
@@ -29,8 +36,23 @@ pub fn die_handler() -> Option<DieHandler> {
 macro_rules! die {
     ($($arg:tt)*) => {
         match $crate::die_handler() {
-            ::core::option::Option::Some(handler) => handler(::core::format_args!($($arg)*)),
-            ::core::option::Option::None => ::core::panic!($($arg)*),
+            ::core::option::Option::Some(handler) => handler(
+                ::core::panic::Location::caller(),
+                #[cfg(not(feature = "no-std"))]
+                std::backtrace::Backtrace::capture(),
+                ::core::format_args!($($arg)*),
+            ),
+            ::core::option::Option::None => {
+                #[cfg(not(feature = "no-std"))]
+                ::core::panic!(
+                    "backtrace: {}, {}",
+                    std::backtrace::Backtrace::capture(),
+                    ::core::format_args!($($arg)*),
+                );
+
+                #[cfg(feature = "no-std")]
+                ::core::panic!($($arg)*);
+            },
         }
     }
 }

@@ -4,6 +4,11 @@
 		{
 			"type": "cargo",
 			"command": "test",
+			"args": [
+				// "--features", "no-std",
+				"--",
+				"--nocapture",
+			],
 			"problemMatcher": [
 				"$rustc"
 			],

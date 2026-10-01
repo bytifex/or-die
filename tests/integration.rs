@@ -6,9 +6,17 @@ static DIE_HANDLER_TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 static DIE_HANDLER_CALLED: std::sync::atomic::AtomicBool =
     std::sync::atomic::AtomicBool::new(false);
 
-fn test_die_handler(args: core::fmt::Arguments) -> ! {
+fn test_die_handler(
+    location: &'static core::panic::Location<'static>,
+    #[cfg(not(feature = "no-std"))] backtrace: std::backtrace::Backtrace,
+    args: core::fmt::Arguments,
+) -> ! {
     DIE_HANDLER_CALLED.store(true, std::sync::atomic::Ordering::SeqCst);
-    panic!("{}", args);
+
+    #[cfg(feature = "no-std")]
+    panic!("location: {}, {}", location, args);
+    #[cfg(not(feature = "no-std"))]
+    panic!("location: {}, backtrace: {}\n{}", location, backtrace, args);
 }
 
 #[test]
@@ -17,6 +25,23 @@ fn set_die_handler_is_invoked_by_die() {
     DIE_HANDLER_CALLED.store(false, std::sync::atomic::Ordering::SeqCst);
 
     or_die::set_die_handler(test_die_handler);
+    let result = std::panic::catch_unwind(|| {
+        die!("my error message");
+    });
+
+    assert!(result.is_err());
+    assert!(DIE_HANDLER_CALLED.load(std::sync::atomic::Ordering::SeqCst));
+}
+
+#[test]
+fn set_die_handler_closure_is_invoked_by_die() {
+    let _guard = DIE_HANDLER_TEST_LOCK.lock().unwrap();
+    DIE_HANDLER_CALLED.store(false, std::sync::atomic::Ordering::SeqCst);
+
+    or_die::set_die_handler(|location, backtrace, args| {
+        test_die_handler(location, backtrace, args)
+    });
+
     let result = std::panic::catch_unwind(|| {
         die!("my error message");
     });
